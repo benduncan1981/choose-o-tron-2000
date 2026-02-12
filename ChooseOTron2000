@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vaporwave Declutter Eliminator</title>
+
+<style>
+body{
+    margin:0;
+    font-family: Arial, sans-serif;
+    background: linear-gradient(180deg,#120018,#2b0040,#001f3f);
+    color:#fff;
+    text-align:center;
+    padding:20px;
+}
+
+/* Neon glow */
+h1,h2,h3{
+    color:#ff71ce;
+    text-shadow:0 0 8px #ff71ce,0 0 16px #ff71ce;
+}
+
+textarea,input{
+    width:95%;
+    max-width:420px;
+    padding:12px;
+    margin:8px 0;
+    border:2px solid #01cdfe;
+    border-radius:10px;
+    background:#111;
+    color:#fff;
+    font-size:16px;
+    box-shadow:0 0 10px #01cdfe;
+}
+
+button{
+    background:#05ffa1;
+    border:none;
+    padding:14px 24px;
+    margin:8px;
+    font-size:18px;
+    font-weight:bold;
+    border-radius:12px;
+    color:#111;
+    box-shadow:0 0 12px #05ffa1;
+    width:140px;
+}
+
+button:active{
+    transform:scale(0.96);
+}
+
+.hidden{ display:none; }
+
+.card{
+    background:rgba(0,0,0,0.4);
+    padding:15px;
+    border-radius:15px;
+    margin:10px auto;
+    max-width:420px;
+    box-shadow:0 0 15px #ff71ce;
+}
+
+.results{
+    text-align:left;
+    display:inline-block;
+    max-width:420px;
+    background:rgba(0,0,0,0.5);
+    padding:15px;
+    border-radius:12px;
+    box-shadow:0 0 15px #01cdfe;
+}
+
+#progressCounter{
+    margin-top:10px;
+    color:#05ffa1;
+    text-shadow:0 0 8px #05ffa1;
+}
+</style>
+</head>
+
+<body>
+
+<!-- SCREEN 1 -->
+<div id="screen1">
+<h1>🌴 Vaporwave Declutter 🌴</h1>
+
+<p>Paste items (one per line)</p>
+<textarea id="inputList" rows="9"></textarea>
+
+<p>Target number to keep</p>
+<input type="number" id="targetInput" min="1">
+
+<br>
+<button onclick="start()">START</button>
+</div>
+
+<!-- SCREEN 2 -->
+<div id="screen2" class="hidden">
+
+<h2>Choose Your Preferred Item</h2>
+
+<div class="card">
+<h3>A</h3>
+<p id="optionA"></p>
+<button onclick="choose('A')">A</button>
+</div>
+
+<div class="card">
+<h3>B</h3>
+<p id="optionB"></p>
+<button onclick="choose('B')">B</button>
+</div>
+
+<button onclick="skipPair()">SKIP</button>
+<button onclick="resetAll()">RESET</button>
+
+<p id="progressCounter"></p>
+
+</div>
+
+<!-- SCREEN 3 -->
+<div id="screen3" class="hidden">
+
+<h1>✨ Final Results ✨</h1>
+
+<div class="results">
+<h3>KEEP</h3>
+<div id="keepersList"></div>
+
+<h3>DISCARD</h3>
+<div id="discardsList"></div>
+</div>
+
+<br><br>
+<button onclick="exportResults()">EXPORT</button>
+<button onclick="resetAll()">RESET</button>
+
+</div>
+
+<script>
+let items=[];
+let scores={};
+let shown=new Set();
+let target=0;
+let total=0;
+let rounds=0;
+
+function start(){
+    const raw=document.getElementById("inputList").value;
+    items=raw.split("\n").map(x=>x.trim()).filter(x=>x!=="");
+
+    if(items.length<2){ alert("Need at least 2 items"); return; }
+
+    target=parseInt(document.getElementById("targetInput").value);
+    if(!target||target<1){ alert("Enter valid target"); return; }
+    if(target>items.length) target=items.length;
+
+    total=items.length;
+    scores={};
+    shown=new Set();
+    rounds=0;
+
+    items.forEach(i=>scores[i]=0);
+
+    document.getElementById("screen1").classList.add("hidden");
+    document.getElementById("screen2").classList.remove("hidden");
+
+    showPair();
+}
+
+function showPair(){
+    const a=items[Math.floor(Math.random()*items.length)];
+    let b;
+    do{
+        b=items[Math.floor(Math.random()*items.length)];
+    } while(b===a);
+
+    window.currentA=a;
+    window.currentB=b;
+
+    shown.add(a);
+    shown.add(b);
+
+    document.getElementById("optionA").textContent=a;
+    document.getElementById("optionB").textContent=b;
+
+    updateProgress();
+}
+
+function choose(letter){
+    rounds++;
+    if(letter==='A') scores[currentA]++;
+    else scores[currentB]++;
+
+    checkFinish();
+    showPair();
+}
+
+function skipPair(){
+    showPair();
+}
+
+function checkFinish(){
+    if(shown.size<total) return;
+
+    const sorted=Object.entries(scores)
+        .sort((a,b)=>b[1]-a[1]);
+
+    const minScore=sorted[target-1][1];
+
+    const confident=sorted.every((e,i)=>{
+        if(i<target) return true;
+        return e[1]<minScore;
+    });
+
+    if(confident){
+        finalize(sorted.map(x=>x[0]));
+    }
+}
+
+function finalize(sortedItems){
+    const keepers=sortedItems.slice(0,target);
+    const discards=sortedItems.slice(target);
+
+    window.finalKeepers=keepers;
+    window.finalDiscards=discards;
+
+    document.getElementById("screen2").classList.add("hidden");
+    document.getElementById("screen3").classList.remove("hidden");
+
+    document.getElementById("keepersList").innerHTML=keepers.join("<br>");
+    document.getElementById("discardsList").innerHTML=discards.join("<br>");
+}
+
+function exportResults(){
+    const text=
+        "KEEP:\n\n"+window.finalKeepers.join("\n")+
+        "\n\nDISCARD:\n\n"+window.finalDiscards.join("\n");
+
+    const blob=new Blob([text],{type:"text/plain"});
+    const link=document.createElement("a");
+    link.href=URL.createObjectURL(blob);
+    link.download="vaporwave-declutter.txt";
+    link.click();
+}
+
+function updateProgress(){
+    document.getElementById("progressCounter").textContent =
+        "Reviewed: "+shown.size+" / "+total+
+        " | Comparisons: "+rounds;
+}
+
+function resetAll(){
+    document.getElementById("screen1").classList.remove("hidden");
+    document.getElementById("screen2").classList.add("hidden");
+    document.getElementById("screen3").classList.add("hidden");
+
+    document.getElementById("inputList").value="";
+    document.getElementById("targetInput").value="";
+    document.getElementById("progressCounter").textContent="";
+}
+</script>
+
+</body>
+</html>
