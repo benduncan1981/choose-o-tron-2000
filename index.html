@@ -2,265 +2,225 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Vaporwave Declutter Eliminator</title>
-
+<title>Decision Engine</title>
 <style>
-body{
-    margin:0;
-    font-family: Arial, sans-serif;
-    background: linear-gradient(180deg,#120018,#2b0040,#001f3f);
-    color:#fff;
-    text-align:center;
-    padding:20px;
+body {
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    background: #111;
+    color: white;
+    text-align: center;
+    padding: 20px;
 }
-
-/* Neon glow */
-h1,h2,h3{
-    color:#ff71ce;
-    text-shadow:0 0 8px #ff71ce,0 0 16px #ff71ce;
+textarea, input {
+    width: 90%;
+    padding: 10px;
+    margin: 10px 0;
 }
-
-textarea,input{
-    width:95%;
-    max-width:420px;
-    padding:12px;
-    margin:8px 0;
-    border:2px solid #01cdfe;
-    border-radius:10px;
-    background:#111;
-    color:#fff;
-    font-size:16px;
-    box-shadow:0 0 10px #01cdfe;
+button {
+    padding: 12px 18px;
+    margin: 6px;
+    font-size: 16px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
 }
-
-button{
-    background:#05ffa1;
-    border:none;
-    padding:14px 24px;
-    margin:8px;
-    font-size:18px;
-    font-weight:bold;
-    border-radius:12px;
-    color:#111;
-    box-shadow:0 0 12px #05ffa1;
-    width:140px;
+.primary { background: #00c896; color: black; }
+.danger { background: #ff5c5c; }
+.secondary { background: #333; color: white; }
+.card {
+    border: 1px solid #333;
+    padding: 20px;
+    margin: 10px;
+    border-radius: 12px;
 }
-
-button:active{
-    transform:scale(0.96);
-}
-
-.hidden{ display:none; }
-
-.card{
-    background:rgba(0,0,0,0.4);
-    padding:15px;
-    border-radius:15px;
-    margin:10px auto;
-    max-width:420px;
-    box-shadow:0 0 15px #ff71ce;
-}
-
-.results{
-    text-align:left;
-    display:inline-block;
-    max-width:420px;
-    background:rgba(0,0,0,0.5);
-    padding:15px;
-    border-radius:12px;
-    box-shadow:0 0 15px #01cdfe;
-}
-
-#progressCounter{
-    margin-top:10px;
-    color:#05ffa1;
-    text-shadow:0 0 8px #05ffa1;
+#robot {
+    margin: 20px 0;
+    font-style: italic;
+    opacity: 0.8;
 }
 </style>
 </head>
-
 <body>
 
-<!-- SCREEN 1 -->
-<div id="screen1">
-<h1>🌴 Vaporwave Declutter 🌴</h1>
+<h2>Robot Decision Engine</h2>
 
-<p>Paste items (one per line)</p>
-<textarea id="inputList" rows="9"></textarea>
-
-<p>Target number to keep</p>
-<input type="number" id="targetInput" min="1">
-
+<div id="setup">
+<textarea id="items" rows="8" placeholder="Paste items, one per line"></textarea>
+<input type="number" id="target" placeholder="How many to KEEP?">
 <br>
-<button onclick="start()">START</button>
+<button class="primary" onclick="start()">Start</button>
 </div>
 
-<!-- SCREEN 2 -->
-<div id="screen2" class="hidden">
-
-<h2>Choose Your Preferred Item</h2>
-
-<div class="card">
-<h3>A</h3>
-<p id="optionA"></p>
-<button onclick="choose('A')">A</button>
+<div id="compare" style="display:none;">
+<div id="robot"></div>
+<div class="card" id="choiceA"></div>
+<button onclick="choose('A')" class="primary">Choose A</button>
+<button onclick="choose('B')" class="primary">Choose B</button>
+<br>
+<button onclick="forceKeep('A')" class="secondary">Keep A</button>
+<button onclick="forceKeep('B')" class="secondary">Keep B</button>
+<br>
+<button onclick="forceDiscard('A')" class="danger">Discard A</button>
+<button onclick="forceDiscard('B')" class="danger">Discard B</button>
+<br>
+<button onclick="goBack()" class="secondary">Back</button>
+<button onclick="resetAll()" class="danger">Reset</button>
 </div>
 
-<div class="card">
-<h3>B</h3>
-<p id="optionB"></p>
-<button onclick="choose('B')">B</button>
-</div>
-
-<button onclick="skipPair()">SKIP</button>
-<button onclick="resetAll()">RESET</button>
-
-<p id="progressCounter"></p>
-
-</div>
-
-<!-- SCREEN 3 -->
-<div id="screen3" class="hidden">
-
-<h1>✨ Final Results ✨</h1>
-
-<div class="results">
-<h3>KEEP</h3>
-<div id="keepersList"></div>
-
-<h3>DISCARD</h3>
-<div id="discardsList"></div>
-</div>
-
-<br><br>
-<button onclick="exportResults()">EXPORT</button>
-<button onclick="resetAll()">RESET</button>
-
-</div>
+<div id="results" style="display:none;"></div>
 
 <script>
-let items=[];
-let scores={};
-let shown=new Set();
-let target=0;
-let total=0;
-let rounds=0;
 
-function start(){
-    const raw=document.getElementById("inputList").value;
-    items=raw.split("\n").map(x=>x.trim()).filter(x=>x!=="");
+let items = [];
+let target = 0;
+let stack = [];
+let history = [];
+let keepForced = [];
+let discardForced = [];
+let left, right, merged;
+let mergeStack = [];
+let robotLines = [
+"Ah. Another human overwhelmed.",
+"Interesting choice. Predictable.",
+"You hesitated. I noticed.",
+"You are revealing yourself.",
+"This is statistically fascinating.",
+"Your priorities are forming.",
+"You cannot hide from preference logic.",
+"Consistency detected. Suspicious.",
+"Fewer items remain. Pressure increasing.",
+"Ranking almost complete. No escape now."
+];
 
-    if(items.length<2){ alert("Need at least 2 items"); return; }
-
-    target=parseInt(document.getElementById("targetInput").value);
-    if(!target||target<1){ alert("Enter valid target"); return; }
-    if(target>items.length) target=items.length;
-
-    total=items.length;
-    scores={};
-    shown=new Set();
-    rounds=0;
-
-    items.forEach(i=>scores[i]=0);
-
-    document.getElementById("screen1").classList.add("hidden");
-    document.getElementById("screen2").classList.remove("hidden");
-
-    showPair();
+function randomRobot() {
+    return robotLines[Math.floor(Math.random()*robotLines.length)];
 }
 
-function showPair(){
-    const a=items[Math.floor(Math.random()*items.length)];
-    let b;
-    do{
-        b=items[Math.floor(Math.random()*items.length)];
-    } while(b===a);
+function start() {
+    items = document.getElementById("items").value
+        .split("\n")
+        .map(x => x.trim())
+        .filter(x => x.length);
 
-    window.currentA=a;
-    window.currentB=b;
+    target = parseInt(document.getElementById("target").value);
 
-    shown.add(a);
-    shown.add(b);
+    if (!items.length || !target || target > items.length) {
+        alert("Invalid input.");
+        return;
+    }
 
-    document.getElementById("optionA").textContent=a;
-    document.getElementById("optionB").textContent=b;
+    keepForced = [];
+    discardForced = [];
+    history = [];
 
-    updateProgress();
+    stack = items.map(item => [item]);
+
+    document.getElementById("setup").style.display = "none";
+    document.getElementById("compare").style.display = "block";
+
+    nextMerge();
 }
 
-function choose(letter){
-    rounds++;
-    if(letter==='A') scores[currentA]++;
-    else scores[currentB]++;
+function nextMerge() {
+    if (stack.length === 1) {
+        finish();
+        return;
+    }
 
-    checkFinish();
-    showPair();
+    let a = stack.shift();
+    let b = stack.shift();
+
+    left = [...a];
+    right = [...b];
+    merged = [];
+
+    mergeStack.push([a,b]);
+    showComparison();
 }
 
-function skipPair(){
-    showPair();
+function showComparison() {
+    if (!left.length) {
+        merged = merged.concat(right);
+        stack.push(merged);
+        nextMerge();
+        return;
+    }
+    if (!right.length) {
+        merged = merged.concat(left);
+        stack.push(merged);
+        nextMerge();
+        return;
+    }
+
+    document.getElementById("choiceA").innerHTML =
+        "<h3>A</h3>" + left[0] +
+        "<h3>B</h3>" + right[0];
+
+    document.getElementById("robot").innerText = randomRobot();
 }
 
-function checkFinish(){
-    if(shown.size<total) return;
-
-    const sorted=Object.entries(scores)
-        .sort((a,b)=>b[1]-a[1]);
-
-    const minScore=sorted[target-1][1];
-
-    const confident=sorted.every((e,i)=>{
-        if(i<target) return true;
-        return e[1]<minScore;
+function choose(side) {
+    history.push({
+        left:[...left],
+        right:[...right],
+        merged:[...merged],
+        stack:[...stack]
     });
 
-    if(confident){
-        finalize(sorted.map(x=>x[0]));
+    if (side === "A") {
+        merged.push(left.shift());
+    } else {
+        merged.push(right.shift());
     }
+
+    showComparison();
 }
 
-function finalize(sortedItems){
-    const keepers=sortedItems.slice(0,target);
-    const discards=sortedItems.slice(target);
-
-    window.finalKeepers=keepers;
-    window.finalDiscards=discards;
-
-    document.getElementById("screen2").classList.add("hidden");
-    document.getElementById("screen3").classList.remove("hidden");
-
-    document.getElementById("keepersList").innerHTML=keepers.join("<br>");
-    document.getElementById("discardsList").innerHTML=discards.join("<br>");
+function forceKeep(side) {
+    let item = side === "A" ? left.shift() : right.shift();
+    keepForced.push(item);
+    showComparison();
 }
 
-function exportResults(){
-    const text=
-        "KEEP:\n\n"+window.finalKeepers.join("\n")+
-        "\n\nDISCARD:\n\n"+window.finalDiscards.join("\n");
-
-    const blob=new Blob([text],{type:"text/plain"});
-    const link=document.createElement("a");
-    link.href=URL.createObjectURL(blob);
-    link.download="vaporwave-declutter.txt";
-    link.click();
+function forceDiscard(side) {
+    let item = side === "A" ? left.shift() : right.shift();
+    discardForced.push(item);
+    showComparison();
 }
 
-function updateProgress(){
-    document.getElementById("progressCounter").textContent =
-        "Reviewed: "+shown.size+" / "+total+
-        " | Comparisons: "+rounds;
+function goBack() {
+    if (!history.length) return;
+    let prev = history.pop();
+    left = prev.left;
+    right = prev.right;
+    merged = prev.merged;
+    stack = prev.stack;
+    showComparison();
 }
 
-function resetAll(){
-    document.getElementById("screen1").classList.remove("hidden");
-    document.getElementById("screen2").classList.add("hidden");
-    document.getElementById("screen3").classList.add("hidden");
+function finish() {
+    let ranked = stack[0];
 
-    document.getElementById("inputList").value="";
-    document.getElementById("targetInput").value="";
-    document.getElementById("progressCounter").textContent="";
+    ranked = keepForced.concat(ranked.filter(x => !keepForced.includes(x)));
+    ranked = ranked.filter(x => !discardForced.includes(x));
+
+    let keep = ranked.slice(0,target);
+    let discard = ranked.slice(target).concat(discardForced);
+
+    document.getElementById("compare").style.display = "none";
+    document.getElementById("results").style.display = "block";
+
+    document.getElementById("results").innerHTML =
+        "<h3>KEEP</h3>" + keep.join("<br>") +
+        "<h3>DISCARD</h3>" + discard.join("<br>") +
+        "<br><button onclick='resetAll()'>Start Over</button>";
+
 }
+
+function resetAll() {
+    location.reload();
+}
+
 </script>
 
 </body>
