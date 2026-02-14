@@ -1,225 +1,273 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0f172a">
 <title>Decision Engine</title>
+
+<link rel="apple-touch-icon" href="icon.png">
+
 <style>
+:root {
+  --bg: linear-gradient(135deg,#0f172a,#1e293b);
+  --glass: rgba(255,255,255,0.08);
+  --border: rgba(255,255,255,0.15);
+  --accent: #38bdf8;
+  --danger: #ef4444;
+  --keep: #22c55e;
+}
+
 body {
-    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-    background: #111;
-    color: white;
-    text-align: center;
-    padding: 20px;
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--bg);
+  color: white;
+  padding: env(safe-area-inset-top) 16px env(safe-area-inset-bottom);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
+
+h1 {
+  font-weight: 600;
+  letter-spacing: -0.5px;
+  margin: 20px 0 10px;
+}
+
+.glass {
+  background: var(--glass);
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 20px;
+  width: 100%;
+  max-width: 500px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+}
+
 textarea, input {
-    width: 90%;
-    padding: 10px;
-    margin: 10px 0;
+  width: 100%;
+  padding: 14px;
+  border-radius: 12px;
+  border: none;
+  margin: 8px 0;
+  font-size: 16px;
 }
+
 button {
-    padding: 12px 18px;
-    margin: 6px;
-    font-size: 16px;
-    border-radius: 8px;
-    border: none;
-    cursor: pointer;
+  width: 100%;
+  padding: 16px;
+  margin: 8px 0;
+  border-radius: 14px;
+  border: none;
+  font-size: 17px;
+  font-weight: 600;
+  transition: 0.2s;
 }
-.primary { background: #00c896; color: black; }
-.danger { background: #ff5c5c; }
-.secondary { background: #333; color: white; }
+
+.primary { background: var(--accent); color: black; }
+.keep { background: var(--keep); }
+.danger { background: var(--danger); }
+.secondary { background: rgba(255,255,255,0.1); color: white; }
+
+button:active {
+  transform: scale(0.96);
+}
+
 .card {
-    border: 1px solid #333;
-    padding: 20px;
-    margin: 10px;
-    border-radius: 12px;
+  background: rgba(255,255,255,0.05);
+  padding: 24px;
+  border-radius: 20px;
+  margin: 10px 0;
+  text-align: center;
+  font-size: 20px;
+  transition: opacity 0.3s ease, transform 0.3s ease;
 }
+
+.fade {
+  opacity: 0;
+  transform: translateY(10px);
+}
+
 #robot {
-    margin: 20px 0;
-    font-style: italic;
-    opacity: 0.8;
+  opacity: 0.7;
+  font-style: italic;
+  margin-bottom: 10px;
 }
+
+.progress {
+  height: 6px;
+  background: rgba(255,255,255,0.1);
+  border-radius: 10px;
+  overflow: hidden;
+  margin: 10px 0 20px;
+}
+
+.progress-bar {
+  height: 100%;
+  width: 0%;
+  background: var(--accent);
+  transition: width 0.3s ease;
+}
+
+.hidden { display: none; }
 </style>
 </head>
+
 <body>
 
-<h2>Robot Decision Engine</h2>
+<h1>Decision Engine</h1>
 
-<div id="setup">
-<textarea id="items" rows="8" placeholder="Paste items, one per line"></textarea>
-<input type="number" id="target" placeholder="How many to KEEP?">
-<br>
-<button class="primary" onclick="start()">Start</button>
+<div id="setup" class="glass">
+<textarea id="items" rows="6" placeholder="Paste items (one per line)"></textarea>
+<input type="number" id="target" placeholder="How many to keep?">
+<button class="primary" onclick="start()">Start Sorting</button>
 </div>
 
-<div id="compare" style="display:none;">
+<div id="compare" class="glass hidden">
 <div id="robot"></div>
-<div class="card" id="choiceA"></div>
-<button onclick="choose('A')" class="primary">Choose A</button>
-<button onclick="choose('B')" class="primary">Choose B</button>
-<br>
-<button onclick="forceKeep('A')" class="secondary">Keep A</button>
-<button onclick="forceKeep('B')" class="secondary">Keep B</button>
-<br>
-<button onclick="forceDiscard('A')" class="danger">Discard A</button>
-<button onclick="forceDiscard('B')" class="danger">Discard B</button>
-<br>
-<button onclick="goBack()" class="secondary">Back</button>
-<button onclick="resetAll()" class="danger">Reset</button>
+<div class="progress"><div class="progress-bar" id="progress"></div></div>
+<div id="counter"></div>
+
+<div class="card" id="cardA"></div>
+<button class="primary" onclick="choose('A')">Choose A</button>
+
+<div class="card" id="cardB"></div>
+<button class="primary" onclick="choose('B')">Choose B</button>
+
+<button class="keep" onclick="forceKeep('A')">Force Keep A</button>
+<button class="keep" onclick="forceKeep('B')">Force Keep B</button>
+
+<button class="danger" onclick="forceDiscard('A')">Discard A</button>
+<button class="danger" onclick="forceDiscard('B')">Discard B</button>
+
+<button class="secondary" onclick="goBack()">Back</button>
+<button class="secondary" onclick="resetAll()">Reset</button>
 </div>
 
-<div id="results" style="display:none;"></div>
+<div id="results" class="glass hidden"></div>
 
 <script>
 
-let items = [];
-let target = 0;
-let stack = [];
-let history = [];
-let keepForced = [];
-let discardForced = [];
-let left, right, merged;
-let mergeStack = [];
-let robotLines = [
-"Ah. Another human overwhelmed.",
-"Interesting choice. Predictable.",
-"You hesitated. I noticed.",
-"You are revealing yourself.",
-"This is statistically fascinating.",
-"Your priorities are forming.",
-"You cannot hide from preference logic.",
-"Consistency detected. Suspicious.",
-"Fewer items remain. Pressure increasing.",
-"Ranking almost complete. No escape now."
+let items=[], target=0;
+let stack=[], left=[], right=[], merged=[];
+let history=[];
+let keepForced=[], discardForced=[];
+let comparisons=0;
+let estimatedTotal=0;
+
+const robotLines=[
+"Ah. Overwhelm detected.",
+"You hesitate. Interesting.",
+"Patterns emerging.",
+"Your hierarchy is forming.",
+"You cannot outrun preference.",
+"This says more about you than you think.",
+"Consistency is impressive.",
+"Data almost complete.",
+"Nearly done. Stay focused."
 ];
 
-function randomRobot() {
-    return robotLines[Math.floor(Math.random()*robotLines.length)];
+function haptic(){
+  if(navigator.vibrate) navigator.vibrate(10);
 }
 
-function start() {
-    items = document.getElementById("items").value
-        .split("\n")
-        .map(x => x.trim())
-        .filter(x => x.length);
-
-    target = parseInt(document.getElementById("target").value);
-
-    if (!items.length || !target || target > items.length) {
-        alert("Invalid input.");
-        return;
-    }
-
-    keepForced = [];
-    discardForced = [];
-    history = [];
-
-    stack = items.map(item => [item]);
-
-    document.getElementById("setup").style.display = "none";
-    document.getElementById("compare").style.display = "block";
-
-    nextMerge();
+function robot(){
+  return robotLines[Math.floor(Math.random()*robotLines.length)];
 }
 
-function nextMerge() {
-    if (stack.length === 1) {
-        finish();
-        return;
-    }
+function start(){
+  items=document.getElementById("items").value.split("\n").map(x=>x.trim()).filter(Boolean);
+  target=parseInt(document.getElementById("target").value);
 
-    let a = stack.shift();
-    let b = stack.shift();
+  if(!items.length||!target||target>items.length){ alert("Check inputs"); return; }
 
-    left = [...a];
-    right = [...b];
-    merged = [];
+  stack=items.map(i=>[i]);
+  estimatedTotal=Math.ceil(items.length*Math.log2(items.length));
+  comparisons=0;
+  history=[];
+  keepForced=[];
+  discardForced=[];
 
-    mergeStack.push([a,b]);
-    showComparison();
+  document.getElementById("setup").classList.add("hidden");
+  document.getElementById("compare").classList.remove("hidden");
+
+  nextMerge();
 }
 
-function showComparison() {
-    if (!left.length) {
-        merged = merged.concat(right);
-        stack.push(merged);
-        nextMerge();
-        return;
-    }
-    if (!right.length) {
-        merged = merged.concat(left);
-        stack.push(merged);
-        nextMerge();
-        return;
-    }
+function nextMerge(){
+  if(stack.length===1){ finish(); return; }
 
-    document.getElementById("choiceA").innerHTML =
-        "<h3>A</h3>" + left[0] +
-        "<h3>B</h3>" + right[0];
-
-    document.getElementById("robot").innerText = randomRobot();
+  left=stack.shift();
+  right=stack.shift();
+  merged=[];
+  show();
 }
 
-function choose(side) {
-    history.push({
-        left:[...left],
-        right:[...right],
-        merged:[...merged],
-        stack:[...stack]
-    });
+function show(){
+  if(!left.length){ stack.push(merged.concat(right)); nextMerge(); return; }
+  if(!right.length){ stack.push(merged.concat(left)); nextMerge(); return; }
 
-    if (side === "A") {
-        merged.push(left.shift());
-    } else {
-        merged.push(right.shift());
-    }
-
-    showComparison();
+  document.getElementById("cardA").innerText=left[0];
+  document.getElementById("cardB").innerText=right[0];
+  document.getElementById("robot").innerText=robot();
+  document.getElementById("counter").innerText=`Comparison ${comparisons} of ~${estimatedTotal}`;
+  document.getElementById("progress").style.width=`${Math.min((comparisons/estimatedTotal)*100,100)}%`;
 }
 
-function forceKeep(side) {
-    let item = side === "A" ? left.shift() : right.shift();
-    keepForced.push(item);
-    showComparison();
+function choose(side){
+  history.push({left:[...left],right:[...right],merged:[...merged],stack:[...stack]});
+  comparisons++;
+  haptic();
+  if(side==="A"){ merged.push(left.shift()); }
+  else{ merged.push(right.shift()); }
+  show();
 }
 
-function forceDiscard(side) {
-    let item = side === "A" ? left.shift() : right.shift();
-    discardForced.push(item);
-    showComparison();
+function forceKeep(side){
+  haptic();
+  if(side==="A"){ keepForced.push(left.shift()); }
+  else{ keepForced.push(right.shift()); }
+  show();
 }
 
-function goBack() {
-    if (!history.length) return;
-    let prev = history.pop();
-    left = prev.left;
-    right = prev.right;
-    merged = prev.merged;
-    stack = prev.stack;
-    showComparison();
+function forceDiscard(side){
+  haptic();
+  if(side==="A"){ discardForced.push(left.shift()); }
+  else{ discardForced.push(right.shift()); }
+  show();
 }
 
-function finish() {
-    let ranked = stack[0];
-
-    ranked = keepForced.concat(ranked.filter(x => !keepForced.includes(x)));
-    ranked = ranked.filter(x => !discardForced.includes(x));
-
-    let keep = ranked.slice(0,target);
-    let discard = ranked.slice(target).concat(discardForced);
-
-    document.getElementById("compare").style.display = "none";
-    document.getElementById("results").style.display = "block";
-
-    document.getElementById("results").innerHTML =
-        "<h3>KEEP</h3>" + keep.join("<br>") +
-        "<h3>DISCARD</h3>" + discard.join("<br>") +
-        "<br><button onclick='resetAll()'>Start Over</button>";
-
+function goBack(){
+  if(!history.length)return;
+  let prev=history.pop();
+  left=prev.left;
+  right=prev.right;
+  merged=prev.merged;
+  stack=prev.stack;
+  comparisons--;
+  show();
 }
 
-function resetAll() {
-    location.reload();
+function finish(){
+  let ranked=stack[0];
+  ranked=keepForced.concat(ranked.filter(x=>!keepForced.includes(x)));
+  ranked=ranked.filter(x=>!discardForced.includes(x));
+
+  let keep=ranked.slice(0,target);
+  let discard=ranked.slice(target).concat(discardForced);
+
+  document.getElementById("compare").classList.add("hidden");
+  document.getElementById("results").classList.remove("hidden");
+  document.getElementById("results").innerHTML=
+    `<h2>Keep</h2>${keep.join("<br>")}
+     <h2>Discard</h2>${discard.join("<br>")}
+     <button class="primary" onclick="resetAll()">Start Over</button>`;
 }
+
+function resetAll(){ location.reload(); }
 
 </script>
 
