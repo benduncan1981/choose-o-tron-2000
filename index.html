@@ -17,6 +17,7 @@
 --fire3:#c22d00;
 }
 
+/* Base */
 html,body{
 margin:0;
 font-family:Arial,Helvetica,sans-serif;
@@ -27,7 +28,6 @@ linear-gradient(180deg,var(--fire1),#000);
 color:white;
 }
 
-/* Default allow scroll */
 body{
 min-height:100dvh;
 overflow-y:auto;
@@ -36,21 +36,34 @@ flex-direction:column;
 align-items:center;
 }
 
-/* Lock scroll only during compare */
 body.locked{
 height:100dvh;
 overflow:hidden;
-justify-content:flex-start;
 }
 
+/* TITLE UPGRADE */
+
 h1{
-margin:8px 0 6px;
-font-size:28px;
+margin:12px 0 10px;
+font-size:34px;
 font-weight:900;
-letter-spacing:4px;
-color:#ffb347;
-text-shadow:0 3px 0 #000;
+letter-spacing:6px;
+background:linear-gradient(180deg,#fff3c4,#ffb347,#ff7a00);
+-webkit-background-clip:text;
+-webkit-text-fill-color:transparent;
+text-shadow:
+0 3px 0 #000,
+0 0 10px rgba(255,140,0,0.6);
+animation:pulse 2.5s infinite ease-in-out;
 }
+
+@keyframes pulse{
+0%{transform:scale(1);}
+50%{transform:scale(1.05);}
+100%{transform:scale(1);}
+}
+
+/* Panels */
 
 .glass{
 background:linear-gradient(145deg,var(--metal1),var(--metal2));
@@ -115,6 +128,10 @@ box-shadow:
 inset 0 0 10px rgba(0,0,0,0.9),
 0 0 6px var(--glow);
 }
+
+/* Duplicate colours */
+.yellow{color:#ffd700;}
+.red{color:#ff4444;}
 
 /* CRT */
 body::after{
@@ -300,15 +317,41 @@ document.body.classList.remove("locked");
 let ranked=stack[0];
 ranked=keepForced.concat(ranked.filter(x=>!keepForced.includes(x)));
 ranked=ranked.filter(x=>!discardForced.includes(x));
+
 let keep=ranked.slice(0,target);
 let discard=ranked.slice(target).concat(discardForced);
 
+let all=[...keep,...discard];
+let counts={};
+all.forEach(i=>counts[i]=(counts[i]||0)+1);
+
+function format(list){
+return list.map(item=>{
+let cls="";
+if(counts[item]>10) cls="red";
+else if(counts[item]>3) cls="yellow";
+return "<div class='"+cls+"'>"+item+"</div>";
+}).join("");
+}
+
 document.getElementById("compare").classList.add("hidden");
 document.getElementById("results").classList.remove("hidden");
+
 document.getElementById("results").innerHTML=
-"<h2>KEEP</h2>"+keep.join("<br>")+
-"<h2>DISCARD</h2>"+discard.join("<br>")+
-"<br><button class='primary' onclick='resetAll()'>RESTART</button>";
+"<h2>KEEP</h2>"+format(keep)+
+"<h2>DISCARD</h2>"+format(discard)+
+"<br><button class='primary' onclick='exportResults()'>EXPORT TO NOTES</button>"+
+"<button class='secondary' onclick='resetAll()'>RESTART</button>";
+}
+
+function exportResults(){
+let text=document.getElementById("results").innerText;
+if(navigator.share){
+navigator.share({title:"DECIDOR Results",text:text});
+}else{
+navigator.clipboard.writeText(text);
+alert("COPIED TO CLIPBOARD");
+}
 }
 
 function resetAll(){location.reload();}
