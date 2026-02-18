@@ -19,17 +19,27 @@
 
 html,body{
 margin:0;
-height:100dvh;
-overflow:hidden;
 font-family:Arial,Helvetica,sans-serif;
 background:
 radial-gradient(circle at 20% 20%,var(--fire3),transparent 50%),
 radial-gradient(circle at 80% 80%,var(--fire2),transparent 50%),
 linear-gradient(180deg,var(--fire1),#000);
 color:white;
+}
+
+/* Default allow scroll */
+body{
+min-height:100dvh;
+overflow-y:auto;
 display:flex;
 flex-direction:column;
 align-items:center;
+}
+
+/* Lock scroll only during compare */
+body.locked{
+height:100dvh;
+overflow:hidden;
 justify-content:flex-start;
 }
 
@@ -54,6 +64,7 @@ box-shadow:
 inset 0 2px 3px rgba(255,255,255,0.05),
 inset 0 -3px 6px rgba(0,0,0,0.7),
 0 8px 20px rgba(0,0,0,0.8);
+margin-bottom:12px;
 }
 
 textarea,input{
@@ -105,7 +116,7 @@ inset 0 0 10px rgba(0,0,0,0.9),
 0 0 6px var(--glow);
 }
 
-/* CRT EFFECT */
+/* CRT */
 body::after{
 content:"";
 position:fixed;
@@ -219,14 +230,16 @@ function animateFace(){
 document.getElementById("robotFace").innerText=
 faces[Math.floor(Math.random()*faces.length)];
 }
-
 setInterval(animateFace,800);
 
 function start(){
 bootSound();
+document.body.classList.add("locked");
+
 items=document.getElementById("items").value.split("\n").map(x=>x.trim()).filter(Boolean);
 target=parseInt(document.getElementById("target").value);
 if(!items.length||!target||target>items.length){alert("CHECK INPUTS");return;}
+
 stack=items.map(i=>[i]);
 estimatedTotal=Math.ceil(items.length*Math.log2(items.length));
 comparisons=0;history=[];keepForced=[];discardForced=[];
@@ -237,9 +250,7 @@ nextMerge();
 
 function nextMerge(){
 if(stack.length===1){finish();return;}
-left=stack.shift();
-right=stack.shift();
-merged=[];
+left=stack.shift();right=stack.shift();merged=[];
 show();
 }
 
@@ -284,17 +295,20 @@ show();
 }
 
 function finish(){
+document.body.classList.remove("locked");
+
 let ranked=stack[0];
 ranked=keepForced.concat(ranked.filter(x=>!keepForced.includes(x)));
 ranked=ranked.filter(x=>!discardForced.includes(x));
 let keep=ranked.slice(0,target);
 let discard=ranked.slice(target).concat(discardForced);
+
 document.getElementById("compare").classList.add("hidden");
 document.getElementById("results").classList.remove("hidden");
 document.getElementById("results").innerHTML=
 "<h2>KEEP</h2>"+keep.join("<br>")+
 "<h2>DISCARD</h2>"+discard.join("<br>")+
-"<button class='primary' onclick='resetAll()'>RESTART</button>";
+"<br><button class='primary' onclick='resetAll()'>RESTART</button>";
 }
 
 function resetAll(){location.reload();}
