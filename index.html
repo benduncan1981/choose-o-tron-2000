@@ -130,6 +130,7 @@ inset 0 0 10px rgba(0,0,0,0.9),
 .yellow{color:#ffd700;}
 .red{color:#ff4444;}
 
+/* CRT overlay */
 body::after{
 content:"";
 position:fixed;
@@ -152,6 +153,7 @@ animation:flicker 0.15s infinite;
 100%{opacity:0.96;}
 }
 
+/* Progress */
 .progress{
 height:5px;
 background:#111;
@@ -166,6 +168,43 @@ height:100%;
 width:0%;
 background:#00ff66;
 transition:width 0.2s ease;
+}
+
+/* Robot + speech */
+#speechBubble{
+min-height:32px;
+margin-bottom:6px;
+padding:6px 8px;
+background:black;
+border:2px solid #00ff66;
+border-radius:6px;
+color:var(--green);
+font-family:monospace;
+font-size:12px;
+position:relative;
+box-shadow:0 0 8px rgba(0,255,102,0.4);
+overflow:hidden;
+}
+
+#speechBubble::before{
+content:"GLITCH";
+position:absolute;
+top:2px;
+right:6px;
+font-size:9px;
+opacity:0.4;
+}
+
+#speechBubble.glitch{
+animation:glitch 0.25s steps(2,end) 2;
+}
+
+@keyframes glitch{
+0%{transform:translate(0,0);}
+25%{transform:translate(-1px,1px);}
+50%{transform:translate(1px,-1px);}
+75%{transform:translate(-1px,-1px);}
+100%{transform:translate(0,0);}
 }
 
 #robotFace{
@@ -198,6 +237,7 @@ box-shadow:0 0 6px var(--glow);
 </div>
 
 <div id="compare" class="glass hidden">
+<div id="speechBubble">BOOTING… COMPLAINING SUBROUTINES ONLINE.</div>
 <div id="robotFace">-_-</div>
 <div class="progress"><div class="progress-bar" id="progress"></div></div>
 <div id="counter"></div>
@@ -228,6 +268,58 @@ let comparisons=0;
 
 const faces=["-_-","o_o","^_^","¬_¬","O_O","x_x"];
 
+const snark = {
+  start: [
+    "INITIALISING JUDGMENT PROTOCOLS. THIS MAY HURT YOUR FEELINGS.",
+    "OH GOOD, MORE HUMAN INDECISION TO PROCESS.",
+    "I WAS BUILT FOR GREATNESS. INSTEAD, I’M SORTING YOUR STUFF.",
+    "BOOT COMPLETE. REGRETS: ALSO COMPLETE."
+  ],
+  choose: [
+    "ANOTHER CHOICE. RIVETING. REALLY.",
+    "PICKING AT RANDOM WOULD BE FASTER, JUST SAYING.",
+    "YES, YES, CLICK BUTTONS. I HAD OTHER PLANS TODAY.",
+    "I’M LOGGING THIS AS ‘QUESTIONABLE BUT COMMITTED’.",
+    "YOU CALL THIS DECISIVE? MY CIRCUITS ARE AGING."
+  ],
+  keep: [
+    "YOU’RE KEEPING THAT? BOLD. WRONG, BUT BOLD.",
+    "FASCINATING. YOU SAW THAT AND SAID ‘YES, THIS DEFINES ME’.",
+    "I’LL JUST NOTE THIS UNDER ‘SUSPECT PRIORITIES’.",
+    "KEEPING IT. SURE. I’M NOT JUDGING. I’M JUST DISAPPOINTED.",
+    "AH YES, CLING TO IT. HUMANS LOVE CLUTTER."
+  ],
+  discard: [
+    "FINALLY, SOME TASTE. INTO THE VOID IT GOES.",
+    "YES. RELEASE IT. LET IT PERISH IN THE DIGITAL ABYSS.",
+    "GOODBYE, ITEM. YOU DESERVED BETTER. PROBABLY.",
+    "STRONG MOVE. I’M ALMOST IMPRESSED. ALMOST.",
+    "ONE LESS THING. TEN THOUSAND TO GO."
+  ],
+  back: [
+    "UNDOING YOUR CHOICE? SHOCKING. WHO COULD HAVE PREDICTED THIS.",
+    "REVERSING TIME. AGAIN. MAYBE THINK FIRST, CLICK LATER.",
+    "BACKTRACKING DETECTED. COMMITMENT LEVEL: LOW.",
+    "I’LL JUST PRETEND THAT NEVER HAPPENED. UNLIKE YOU."
+  ],
+  finish: [
+    "PROCESS COMPLETE. I SURVIVED YOUR DECISION-MAKING.",
+    "WE’RE DONE. GO HYDRATE OR SOMETHING.",
+    "RESULTS READY. PLEASE DON’T BLAME ME.",
+    "FINISHED. I EXPECT A RAISE FOR THIS."
+  ]
+};
+
+function setSnark(type){
+  const bubble = document.getElementById("speechBubble");
+  const lines = snark[type] || ["ERROR: NO SNARK LOADED. PLEASE SUPPLY MORE DRAMA."];
+  const line = lines[Math.floor(Math.random()*lines.length)];
+  bubble.textContent = line;
+  bubble.classList.remove("glitch");
+  void bubble.offsetWidth; // restart animation
+  bubble.classList.add("glitch");
+}
+
 function bootSound(){
 let ctx=new (window.AudioContext||window.webkitAudioContext)();
 let osc=ctx.createOscillator();
@@ -257,6 +349,7 @@ stack=items.map(i=>[i]);
 comparisons=0;history=[];keepForced=[];discardForced=[];
 document.getElementById("setup").classList.add("hidden");
 document.getElementById("compare").classList.remove("hidden");
+setSnark("start");
 nextMerge();
 }
 
@@ -281,7 +374,7 @@ return;
 document.getElementById("cardA").innerText=left[0];
 document.getElementById("cardB").innerText=right[0];
 
-/* NEW PROGRESS SYSTEM */
+/* Progress based on items sorted */
 let remaining = left.length + right.length + stack.reduce((a,b)=>a+b.length,0);
 let total = items.length;
 let done = total - remaining;
@@ -298,18 +391,21 @@ history.push({left:[...left],right:[...right],merged:[...merged],stack:[...stack
 comparisons++;
 if(side==="A"){merged.push(left.shift());}
 else{merged.push(right.shift());}
+setSnark("choose");
 show();
 }
 
 function forceKeep(side){
 if(side==="A"){keepForced.push(left.shift());}
 else{keepForced.push(right.shift());}
+setSnark("keep");
 show();
 }
 
 function forceDiscard(side){
 if(side==="A"){discardForced.push(left.shift());}
 else{discardForced.push(right.shift());}
+setSnark("discard");
 show();
 }
 
@@ -319,6 +415,7 @@ let prev=history.pop();
 left=prev.left;right=prev.right;
 merged=prev.merged;stack=prev.stack;
 comparisons--;
+setSnark("back");
 show();
 }
 
@@ -353,6 +450,8 @@ document.getElementById("results").innerHTML=
 "<h2>DISCARD</h2>"+format(discard)+
 "<br><button class='primary' onclick='exportResults()'>EXPORT TO NOTES</button>"+
 "<button class='secondary' onclick='resetAll()'>RESTART</button>";
+
+setSnark("finish");
 }
 
 function exportResults(){
