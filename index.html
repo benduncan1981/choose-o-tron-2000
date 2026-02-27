@@ -41,8 +41,7 @@ height:100dvh;
 overflow:hidden;
 }
 
-/* TITLE UPGRADE */
-
+/* TITLE */
 h1{
 margin:12px 0 10px;
 font-size:34px;
@@ -64,7 +63,6 @@ animation:pulse 2.5s infinite ease-in-out;
 }
 
 /* Panels */
-
 .glass{
 background:linear-gradient(145deg,var(--metal1),var(--metal2));
 border:3px solid #000;
@@ -129,11 +127,9 @@ inset 0 0 10px rgba(0,0,0,0.9),
 0 0 6px var(--glow);
 }
 
-/* Duplicate colours */
 .yellow{color:#ffd700;}
 .red{color:#ff4444;}
 
-/* CRT */
 body::after{
 content:"";
 position:fixed;
@@ -228,7 +224,7 @@ box-shadow:0 0 6px var(--glow);
 let items=[],target=0;
 let stack=[],left=[],right=[],merged=[];
 let history=[],keepForced=[],discardForced=[];
-let comparisons=0,estimatedTotal=0;
+let comparisons=0;
 
 const faces=["-_-","o_o","^_^","¬_¬","O_O","x_x"];
 
@@ -258,7 +254,6 @@ target=parseInt(document.getElementById("target").value);
 if(!items.length||!target||target>items.length){alert("CHECK INPUTS");return;}
 
 stack=items.map(i=>[i]);
-estimatedTotal=Math.ceil(items.length*Math.log2(items.length));
 comparisons=0;history=[];keepForced=[];discardForced=[];
 document.getElementById("setup").classList.add("hidden");
 document.getElementById("compare").classList.remove("hidden");
@@ -272,14 +267,30 @@ show();
 }
 
 function show(){
-if(!left.length){stack.push(merged.concat(right));nextMerge();return;}
-if(!right.length){stack.push(merged.concat(left));nextMerge();return;}
+if(!left.length){
+stack.push(merged.concat(right));
+nextMerge();
+return;
+}
+if(!right.length){
+stack.push(merged.concat(left));
+nextMerge();
+return;
+}
+
 document.getElementById("cardA").innerText=left[0];
 document.getElementById("cardB").innerText=right[0];
-document.getElementById("counter").innerText=
-"COMPARISON "+comparisons+" OF ~"+estimatedTotal;
-document.getElementById("progress").style.width=
-Math.min((comparisons/estimatedTotal)*100,100)+"%";
+
+/* NEW PROGRESS SYSTEM */
+let remaining = left.length + right.length + stack.reduce((a,b)=>a+b.length,0);
+let total = items.length;
+let done = total - remaining;
+let pct = Math.min((done/total)*100,100);
+
+document.getElementById("counter").innerText =
+"ITEMS SORTED: " + done + " / " + total;
+
+document.getElementById("progress").style.width = pct + "%";
 }
 
 function choose(side){
